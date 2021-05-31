@@ -70,6 +70,8 @@ void resetRows() {
     rows[0] = 0x1C; rows[1] = 0x00; rows[2] = 0x00;
     rows[3] = 0x08; rows[4] = 0x00; rows[5] = 0x00;
     rows[6] = 0x00; rows[7] = 0x1C;
+    ballPattern = 0x08;
+    ballRowIndex = 3;
 }
 
 // Removes ball from screen
@@ -209,9 +211,7 @@ int BallStatus_Tick(int state) {
                 resetRows();
                 state = BS_Wait;
             }
-            if (ballRowIndex == 1) { 
-                state = updateBallStatus(); 
-            }
+            if (ballRowIndex == 1) { state = updateBallStatus(); }
             else { state = BS_Right; }
             break; 
 
