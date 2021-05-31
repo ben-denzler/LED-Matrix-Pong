@@ -11,6 +11,8 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <stdio.h>
+#include <stdlib.h>
 #include "../header/timer.h"
 #include "../header/scheduler.h"
 #include "../header/keypad.h"
@@ -27,8 +29,7 @@
 // Matrix info
 const unsigned char numRows = 8;
 unsigned char gameStart = 0;  // 0 = game reset, 1 = game start
-unsigned char rows[8] = { 0x1C, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x1C };  // First, last are paddles
-// unsigned char rows[8] = { 0x1C, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x1C };  // Paddles w/ smiley
+unsigned char rows[8] = { 0x1C, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1C };  // First, last are paddles
 
 // Paddle variables
 const unsigned char paddleTopPos = 0xE0;
@@ -36,8 +37,15 @@ const unsigned char paddleBotPos = 0x07;
 #define rightPaddlePattern rows[0]
 #define leftPaddlePattern rows[7]
 
-enum StartResetInput_States { SR_Wait, SR_Update };
-int StartResetInput_Tick(int state) {
+// Resets row patters to default
+void resetRows() {
+    rows[0] = 0x1C; rows[1] = 0x00; rows[2] = 0x00;
+    rows[3] = 0x08; rows[4] = 0x00; rows[5] = 0x00;
+    rows[6] = 0x00; rows[7] = 0x1C;
+}
+
+enum StartReset_States { SR_Wait, SR_Update };
+int StartReset_Tick(int state) {
     unsigned char tmpPA2 = (~PINA) & 0x04;  // PA2 = Start/reset
 
     switch (state) {    // Transitions
@@ -45,6 +53,7 @@ int StartResetInput_Tick(int state) {
             if (tmpPA2) { 
                 state = SR_Update; 
                 gameStart = ~gameStart;
+                if (!gameStart) { resetRows(); }
             }
             else { state = SR_Wait; }
             break;
@@ -56,8 +65,6 @@ int StartResetInput_Tick(int state) {
 
         default: state = SR_Wait; break;
     }
-    if (gameStart) { set_PWM(261.63); } // DEBUGGING
-    else if (gameStart == 0) { set_PWM(0); }
     return state;
 }
 
@@ -150,11 +157,11 @@ int main(void) {
     task2.elapsedTime = task2.period;
     task2.TickFct = &Output_Tick;
 
-    // Task 3 (StartResetInput_Tick)
+    // Task 3 (StartReset_Tick)
     task3.state = start;
     task3.period = 20;
     task3.elapsedTime = task3.period;
-    task3.TickFct = &StartResetInput_Tick;
+    task3.TickFct = &StartReset_Tick;
 
     // Find GCD for period
     unsigned short i = 0;
