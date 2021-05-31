@@ -14,14 +14,21 @@
 #include "../header/timer.h"
 #include "../header/scheduler.h"
 #include "../header/keypad.h"
+#include "../header/pwm.h"
 
 // Pattern on a row: 0 = on, 1 = off (invert)
 // Which rows to display on: 1 = on, 0 = off
 // 0x01 = row 1 (top), 0x80 = row 8 (bottom)
 
+// PA0 = Right paddle up
+// PA1 = Right paddle down
+// PA2 = Start/reset
+
 // Matrix info
 const unsigned char numRows = 8;
+unsigned char gameStart = 0;  // 0 = game reset, 1 = game start
 unsigned char rows[8] = { 0x1C, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x1C };  // First, last are paddles
+// unsigned char rows[8] = { 0x1C, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x1C };  // Paddles w/ smiley
 
 // Paddle variables
 const unsigned char paddleTopPos = 0xE0;
@@ -29,30 +36,32 @@ const unsigned char paddleBotPos = 0x07;
 #define rightPaddlePattern rows[0]
 #define leftPaddlePattern rows[7]
 
-// DEBUGGING: Show output of any char on LEDs
-void displayChar(unsigned char var) {
-    switch (var) {
-        case 0: PORTB = 0x1F; break;
-        case 1: PORTB = 0x01; break;
-        case 2: PORTB = 0x02; break;
-        case 3: PORTB = 0x03; break;
-        case 4: PORTB = 0x04; break;
-        case 5: PORTB = 0x05; break;
-        case 6: PORTB = 0x06; break;
-        case 7: PORTB = 0x07; break;
-        case 8: PORTB = 0x08; break;
-        case 9: PORTB = 0x09; break;
-        case 10: PORTB = 0x0A; break;
-        case 11: PORTB = 0x0B; break;
-        case 12: PORTB = 0x0C; break;
-        case 13: PORTB = 0x0D; break;
-        case 14: PORTB = 0x0E; break;
-        case 15: PORTB = 0x00; break;
-        case 16: PORTB = 0x0F; break;
-        default: PORTB = 0x1B; break;  // Should never occur, middle LED off
+enum StartResetInput_States { SR_Wait, SR_Update };
+int StartResetInput_Tick(int state) {
+    unsigned char tmpPA2 = (~PINA) & 0x04;  // PA2 = Start/reset
+
+    switch (state) {    // Transitions
+        case SR_Wait:
+            if (tmpPA2) { 
+                state = SR_Update; 
+                gameStart = ~gameStart;
+            }
+            else { state = SR_Wait; }
+            break;
+
+        case SR_Update: 
+            if (tmpPA2) { state = SR_Update; }
+            else { state = SR_Wait; }
+            break;
+
+        default: state = SR_Wait; break;
     }
+    if (gameStart) { set_PWM(261.63); } // DEBUGGING
+    else if (gameStart == 0) { set_PWM(0); }
+    return state;
 }
 
+// Get input, update right paddle position
 enum RightPaddleInput_States { RPI_Wait, RPI_Up, RPI_Down };
 int RightPaddleInput_Tick(int state) {
     unsigned char tmpPA0 = (~PINA) & 0x01;  // PA0 = right paddle up
@@ -85,6 +94,7 @@ int RightPaddleInput_Tick(int state) {
     return state;
 }
 
+// Outputs to each row, does not modify the patterns
 enum Output_States { Display };
 int Output_Tick(int state) {
     static unsigned char pattern = 0x00;    // Start with rows[0]
@@ -116,13 +126,14 @@ int Output_Tick(int state) {
 }
 
 int main(void) {
-    DDRA = 0x00; PORTA = 0xFF;  // Pin A is input
+    DDRA = 0x00; PORTA = 0xFF;  // Pin A is input (buttons)
+    DDRB = 0x40; PORTB = 0xBF;  // PB6 is output (PWM), rest is input
     DDRC = 0xFF; PORTC = 0x00;  // Pin C is output (matrix cols, GROUND)
     DDRD = 0xFF; PORTD = 0x00;  // Pin D is output (matrix rows, OUTPUT)
 
     // Array of tasks
-    static task task1, task2;
-    task* tasks[] = { &task1, &task2 };
+    static task task1, task2, task3;
+    task* tasks[] = { &task1, &task2, &task3 };
     const unsigned short numTasks = (sizeof(tasks) / sizeof(task*));
 
     const char start = -1;
@@ -139,6 +150,12 @@ int main(void) {
     task2.elapsedTime = task2.period;
     task2.TickFct = &Output_Tick;
 
+    // Task 3 (StartResetInput_Tick)
+    task3.state = start;
+    task3.period = 20;
+    task3.elapsedTime = task3.period;
+    task3.TickFct = &StartResetInput_Tick;
+
     // Find GCD for period
     unsigned short i = 0;
     unsigned long GCD = tasks[0]->period;
@@ -148,6 +165,7 @@ int main(void) {
 
     TimerSet(GCD);
     TimerOn();
+    PWM_on();
 
     while (1) {
         for (i = 0; i < numTasks; ++i) {
