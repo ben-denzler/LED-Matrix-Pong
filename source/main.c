@@ -84,7 +84,7 @@ void clearBall() {
 // Top: 0xE0
 // 	    0x70
 // 	    0x31
-// 	    0x1C
+// Mid: 0x1C
 // 	    0x0E
 // Bot: 0x07
 
@@ -96,19 +96,28 @@ int updateBallStatus() {
             switch (rightPaddlePattern) {   // Check where the right paddle is
                 case 0xE0:  // Top
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x70:
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x31:
                     switch (ballPattern) { default: break; }
-                case 0x1C:
+                    break;
+                case 0x1C:  // Mid
                     switch (ballPattern) {
                         case 0x08: newBallStatus = BS_Left; break;
                         default: break;
                     }
+                    break;
                 case 0x0E:
-                    switch (ballPattern) { default: break; }
+                    switch (ballPattern) {
+                        case 0x08: newBallStatus = BS_UpLeft;
+                        default: break; 
+                    }
+                    break;
                 case 0x07:  // Bottom
                     switch (ballPattern) { default: break; }
+                    break;
                 default: break;
             }
             break;
@@ -116,19 +125,25 @@ int updateBallStatus() {
             switch (leftPaddlePattern) {    // Check where the left paddle is
                 case 0xE0:  // Top
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x70:
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x31:
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x1C:
                     switch (ballPattern) {
                         case 0x08: newBallStatus = BS_Right; break;
                         default: break;
                     }
+                    break;
                 case 0x0E:
                     switch (ballPattern) { default: break; }
+                    break;
                 case 0x07:  // Bottom
                     switch (ballPattern) { default: break; }
+                    break;
                 default: break;
             }
             break;
@@ -194,6 +209,39 @@ int RightPaddleInput_Tick(int state) {
     return state;
 }
 
+// Get input, update left paddle position
+enum LeftPaddleInput_States { LPI_Wait, LPI_Up, LPI_Down };
+int LeftPaddleInput_Tick(int state) {
+    unsigned char tmpPA3 = (~PINA) & 0x08;  // PA3 = left paddle up
+    unsigned char tmpPA4 = (~PINA) & 0x10;  // PA4 = left paddle down
+
+    switch (state) {    // Transitions
+        case LPI_Wait:
+            if ((leftPaddlePattern != paddleTopPos) && tmpPA3) {
+                leftPaddlePattern <<= 1;
+                state = LPI_Up;
+            }
+            else if ((leftPaddlePattern != paddleBotPos) && tmpPA4) {
+                leftPaddlePattern >>= 1;
+                state = LPI_Down;
+            }
+            break;
+
+        case LPI_Up:
+            if (tmpPA3) { state = LPI_Up; }
+            else if (!tmpPA3) { state = LPI_Wait; }
+            break;
+
+        case LPI_Down:
+            if (tmpPA4) { state = LPI_Down; }
+            else if (!tmpPA4) { state = LPI_Wait; }
+            break;
+
+        default: state = LPI_Wait; break;
+    }
+    return state;
+}
+
 // Handles ball physics
 int BallStatus_Tick(int state) {
     unsigned char r = rand() % 10;  // Decides initial ball direction
@@ -224,6 +272,46 @@ int BallStatus_Tick(int state) {
             else { state = BS_Left; }
             break;
 
+        case BS_UpLeft:
+            if (!gameStart) {
+                resetRows();
+                state = BS_Wait;
+            }
+            else if ((ballPattern == 0x80) && (ballRowIndex != 6)) { state = BS_DownLeft; }
+            else if (ballRowIndex == 6) { state = updateBallStatus(); }
+            else { state = BS_UpLeft; }
+            break;
+
+        case BS_DownLeft:
+            if (!gameStart) {
+                resetRows();
+                state = BS_Wait;
+            }
+            else if ((ballPattern == 0x01) && (ballRowIndex != 6)) { state = BS_UpLeft; }
+            else if (ballRowIndex == 6) { state = updateBallStatus(); }
+            else { state = BS_DownLeft; }
+            break;
+
+        case BS_UpRight:
+            if (!gameStart) {
+                resetRows();
+                state = BS_Wait;
+            }
+            else if ((ballPattern == 0x80) && (ballRowIndex != 1)) { state = BS_DownRight; }
+            else if (ballRowIndex == 1) { state = updateBallStatus(); }
+            else { state = BS_UpRight; }
+            break;
+
+        case BS_DownRight:
+            if (!gameStart) {
+                resetRows();
+                state = BS_Wait;
+            }
+            else if ((ballPattern == 0x01) && (ballRowIndex != 1)) { state = BS_UpRight; }
+            else if (ballRowIndex == 1) { state = updateBallStatus(); }
+            else { state = BS_DownRight; }
+            break;
+
         default: state = BS_Wait; break;
     }
     switch (state) {    // Actions
@@ -236,6 +324,18 @@ int BallStatus_Tick(int state) {
 
         case BS_Left:
             rows[ballRowIndex] = 0x00;
+            rows[++ballRowIndex] = ballPattern;
+            break;
+
+        case BS_UpLeft:
+            rows[ballRowIndex] = 0x00;
+            ballPattern <<= 1;
+            rows[++ballRowIndex] = ballPattern;
+            break;
+
+        case BS_DownLeft:
+            rows[ballRowIndex] = 0x00;
+            ballPattern >>= 1;
             rows[++ballRowIndex] = ballPattern;
             break;
 
@@ -284,8 +384,8 @@ int main(void) {
     DDRD = 0xFF; PORTD = 0x00;  // Pin D is output (matrix rows, OUTPUT)
 
     // Array of tasks
-    static task task1, task2, task3, task4;
-    task* tasks[] = { &task1, &task2, &task3, &task4 };
+    static task task1, task2, task3, task4, task5;
+    task* tasks[] = { &task1, &task2, &task3, &task4, &task5 };
     const unsigned short numTasks = (sizeof(tasks) / sizeof(task*));
 
     const char start = -1;
@@ -298,21 +398,28 @@ int main(void) {
     tasks[j]->TickFct = &RightPaddleInput_Tick;
     ++j;
 
-    // Task 2 (BallStatus_Tick)
+    // Task 2 (LeftPaddleInput_Tick)
+    tasks[j]->state = start;
+    tasks[j]->period = 10;
+    tasks[j]->elapsedTime = tasks[j]->period;
+    tasks[j]->TickFct = &LeftPaddleInput_Tick;
+    ++j;
+
+    // Task 3 (BallStatus_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 500;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &BallStatus_Tick;
     ++j;
 
-    // Task 3 (Output_Tick)
+    // Task 4 (Output_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 1;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &Output_Tick;
     ++j;
 
-    // Task 4 (StartReset_Tick)
+    // Task 5 (StartReset_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 20;
     tasks[j]->elapsedTime = tasks[j]->period;
