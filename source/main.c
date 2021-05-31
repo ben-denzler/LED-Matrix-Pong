@@ -21,12 +21,13 @@
 
 // Matrix info
 const unsigned char numRows = 8;
+unsigned char rows[8] = { 0x1C, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x1C };  // First, last are paddles
 
 // Paddle variables
 const unsigned char paddleTopPos = 0xE0;
 const unsigned char paddleBotPos = 0x07;
-unsigned char leftPaddlePattern = 0x1C;
-unsigned char rightPaddlePattern = 0x1C;
+#define rightPaddlePattern rows[0]
+#define leftPaddlePattern rows[7]
 
 // DEBUGGING: Show output of any char on LEDs
 void displayChar(unsigned char var) {
@@ -50,68 +51,6 @@ void displayChar(unsigned char var) {
         case 16: PORTB = 0x0F; break;
         default: PORTB = 0x1B; break;  // Should never occur, middle LED off
     }
-}
-
-// Demo code for LED matrix
-enum Demo_States { shift_demo };
-int Demo_Tick(int state) {
-    static unsigned char pattern = 0x80;  // Pattern on a row: 0 = on, 1 = off (invert)
-    static unsigned char row = 0x01;      // Which rows to display on: 1 = on, 0 = off
-                                          // 0x01 = row 1 (top), 0x80 = row 8 (bottom)
-
-    switch (state) {    // Transitions
-        case shift_demo: break;
-        default: state = shift_demo; break;
-    }
-    switch (state) {    // Actions
-        case shift_demo:
-            if ((pattern == 0x01) && (row == 0x80)) {
-                pattern = 0x80;
-                row = 0x01;
-            }
-            else if (pattern == 0x01) {
-                pattern = 0x80;
-                row = row << 1;
-            }
-            else {
-                pattern = pattern >> 1;
-            }
-        default: break;
-    }
-    PORTC = ~pattern;
-    PORTD = row;
-    return state;
-}
-
-enum DemoSprite_States { shift_sprite };
-int DemoSprite_Tick(int state) {
-    unsigned char rows[8] = { 0x00, 0x24, 0x24, 0x00, 0x42, 0x42, 0x3C, 0x00 };  // Pattern per row
-    static unsigned char pattern = 0x00;    // Start with row[0]
-    static unsigned char row = 0x01;        // Start at row 1
-    static unsigned char i = 0;
-
-    switch (state) {    // Transitions
-        case shift_sprite: break;
-        default: state = shift_sprite; break;
-    }
-    switch (state) {    // Actions
-        case shift_sprite:
-            if (i != numRows) {
-                PORTC = ~pattern;
-                PORTD = row;
-                if (i == 7) { ++i; }
-                else { pattern = rows[++i]; } 
-                row <<= 1;
-            }
-            else {
-                i = 0;
-                pattern = 0x00;
-                row = 0x01;
-            }
-            break;
-        default: break;
-    }
-    return state;
 }
 
 enum RightPaddleInput_States { RPI_Wait, RPI_Up, RPI_Down };
@@ -146,21 +85,30 @@ int RightPaddleInput_Tick(int state) {
     return state;
 }
 
-enum PaddlesOutput_States { PO_DisplayRight, PO_DisplayLeft };
-int PaddlesOutput_Tick(int state) {
+enum Output_States { Display };
+int Output_Tick(int state) {
+    static unsigned char pattern = 0x00;    // Start with rows[0]
+    static unsigned char row = 0x01;        // Start at row 1
+    static unsigned char i = 0;
+
     switch (state) {    // Transitions
-        case PO_DisplayRight: state = PO_DisplayLeft; break;
-        case PO_DisplayLeft: state = PO_DisplayRight; break;
-        default: state = PO_DisplayRight; break;
+        case Display: break;
+        default: state = Display; break;
     }
     switch (state) {    // Actions
-        case PO_DisplayRight:
-            PORTC = ~rightPaddlePattern;
-            PORTD = 0x01;
-            break;
-        case PO_DisplayLeft:
-            PORTC = ~leftPaddlePattern;
-            PORTD = 0x80;
+        case Display:
+            if (i != numRows) {
+                PORTC = ~pattern;
+                PORTD = row;
+                if (i == 7) { ++i; }
+                else { pattern = rows[++i]; } 
+                row <<= 1;
+            }
+            else {
+                i = 0;
+                pattern = rows[0];
+                row = 0x01;
+            }
             break;
         default: break;
     }
@@ -173,29 +121,23 @@ int main(void) {
     DDRD = 0xFF; PORTD = 0x00;  // Pin D is output (matrix rows, OUTPUT)
 
     // Array of tasks
-    static task task1, task3;
-    task* tasks[] = { &task1, &task3 };
+    static task task1, task2;
+    task* tasks[] = { &task1, &task2 };
     const unsigned short numTasks = (sizeof(tasks) / sizeof(task*));
 
     const char start = -1;
 
-    // Task 1 (Demo_Tick)
+    // Task 1 (RightPaddleInput_Tick)
     task1.state = start;
-    task1.period = 1;
+    task1.period = 10;
     task1.elapsedTime = task1.period;
-    task1.TickFct = &DemoSprite_Tick;
+    task1.TickFct = &RightPaddleInput_Tick;
 
-    // // Task 2 (RightPaddleInput_Tick)
-    // task2.state = start;
-    // task2.period = 10;
-    // task2.elapsedTime = task2.period;
-    // task2.TickFct = &RightPaddleInput_Tick;
-
-    // Task 3 (PaddlesOutput_Tick)
-    task3.state = start;
-    task3.period = 1;
-    task3.elapsedTime = task3.period;
-    task3.TickFct = &PaddlesOutput_Tick;
+    // Task 2 (Output_Tick)
+    task2.state = start;
+    task2.period = 1;
+    task2.elapsedTime = task2.period;
+    task2.TickFct = &Output_Tick;
 
     // Find GCD for period
     unsigned short i = 0;
