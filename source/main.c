@@ -29,11 +29,12 @@
 // Matrix info
 const unsigned char numRows = 8;
 unsigned char gameStart = 0;  // 0 = game reset/paused, 1 = game start
-enum BallStatus_States { BS_Wait, BS_Right, BS_Left, BS_UpRight, BS_DownRight, BS_UpLeft, BS_DownLeft, BS_Miss } currBallStatus;  // Possible movements for ball
-unsigned char rows[8] = { 0x1C, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1C };  // First, last are paddles
-//              Rows:      1      2     3     4     5     6     7     8
 unsigned char ballPattern = 0x08;  // Ball is initially 0x08
 unsigned char ballRowIndex = 3;    // Ball is initially index 3 in rows[]
+enum BallStatus_States { BS_Wait, BS_Right, BS_Left, BS_UpRight, 
+                        BS_DownRight, BS_UpLeft, BS_DownLeft, BS_MissRight, BS_MissLeft } currBallStatus;  // Possible movements for ball
+unsigned char rows[8] = { 0x1C, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1C };  // First, last are paddles
+//              Rows:      1      2     3     4     5     6     7     8
 
 // Paddle variables
 const unsigned char paddleTopPos = 0xE0;
@@ -81,24 +82,6 @@ void clearBall() {
     rows[4] = 0x00; rows[5] = 0x00; rows[6] = 0x00;
 }
 
-// Possible paddle locations (6):
-// Top: 0xE0
-// 	    0x70
-// 	    0x31
-// Mid: 0x1C
-// 	    0x0E
-// Bot: 0x07
-
-// case 0x80: break;
-// case 0x40: break;
-// case 0x20: break;
-// case 0x10: break;
-// case 0x08: break;
-// case 0x04: break;
-// case 0x02: break;
-// case 0x01: break;
-// default: break;
-
 // Update the ball's status/direction
 int updateBallStatus() {
     int newBallStatus = -1;
@@ -110,7 +93,7 @@ int updateBallStatus() {
                         case 0x80: newBallStatus = BS_DownLeft; break;
                         case 0x40: newBallStatus = BS_Left; break;
                         case 0x20: newBallStatus = BS_DownLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -119,7 +102,7 @@ int updateBallStatus() {
                         case 0x40: newBallStatus = BS_UpLeft; break;
                         case 0x20: newBallStatus = BS_Left; break;
                         case 0x10: newBallStatus = BS_DownLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -129,7 +112,7 @@ int updateBallStatus() {
                         case 0x20: newBallStatus = BS_UpLeft; break;
                         case 0x10: newBallStatus = BS_Left; break;
                         case 0x08: newBallStatus = BS_DownLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -138,7 +121,7 @@ int updateBallStatus() {
                         case 0x10: newBallStatus = BS_UpLeft; break;
                         case 0x08: newBallStatus = BS_Left; break;
                         case 0x04: newBallStatus = BS_DownLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -147,7 +130,7 @@ int updateBallStatus() {
                         case 0x08: newBallStatus = BS_UpLeft; break;
                         case 0x04: newBallStatus = BS_Left; break;
                         case 0x02: newBallStatus = BS_DownLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -156,7 +139,7 @@ int updateBallStatus() {
                         case 0x04: newBallStatus = BS_UpLeft; break;
                         case 0x02: newBallStatus = BS_Left; break;
                         case 0x01: newBallStatus = BS_UpLeft; break;
-                        default: break;
+                        default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
@@ -171,7 +154,7 @@ int updateBallStatus() {
                         case 0x80: newBallStatus = BS_DownRight; break;
                         case 0x40: newBallStatus = BS_Right; break;
                         case 0x20: newBallStatus = BS_DownRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -180,7 +163,7 @@ int updateBallStatus() {
                         case 0x40: newBallStatus = BS_UpRight; break;
                         case 0x20: newBallStatus = BS_Right; break;
                         case 0x10: newBallStatus = BS_DownRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -189,7 +172,7 @@ int updateBallStatus() {
                         case 0x20: newBallStatus = BS_UpRight; break;
                         case 0x10: newBallStatus = BS_Right; break;
                         case 0x08: newBallStatus = BS_DownRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -198,7 +181,7 @@ int updateBallStatus() {
                         case 0x10: newBallStatus = BS_UpRight; break;
                         case 0x08: newBallStatus = BS_Right; break;
                         case 0x04: newBallStatus = BS_DownRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -207,7 +190,7 @@ int updateBallStatus() {
                         case 0x08: newBallStatus = BS_UpRight; break;
                         case 0x04: newBallStatus = BS_Right; break;
                         case 0x02: newBallStatus = BS_DownRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -216,7 +199,7 @@ int updateBallStatus() {
                         case 0x04: newBallStatus = BS_UpRight; break;
                         case 0x02: newBallStatus = BS_Right; break;
                         case 0x01: newBallStatus = BS_UpRight; break;
-                        default: break;
+                        default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
@@ -388,11 +371,28 @@ int BallStatus_Tick(int state) {
             else { state = BS_DownRight; }
             break;
 
+        case BS_MissRight:
+            if (!gameStart) { state = BS_MissRight; }
+            else {
+                resetRows();
+                gameStart = 0;
+                state = BS_Wait;
+            }
+            break;
+
+        case BS_MissLeft:
+            if (!gameStart) { state = BS_MissLeft; }
+            else {
+                resetRows();
+                gameStart = 0;
+                state = BS_Wait;
+            }
+            break;
+
         default: state = BS_Wait; break;
     }
-    if (state == BS_DownRight) { set_PWM(261.63); }  // DEBUGGING
     switch (state) {    // Actions
-        case BS_Wait: currBallStatus = BS_Wait; break;
+        case BS_Wait: break;
 
         case BS_Right:
             currBallStatus = BS_Right;
@@ -434,6 +434,45 @@ int BallStatus_Tick(int state) {
             rows[--ballRowIndex] = ballPattern;
             break;
 
+        case BS_MissRight:
+            currBallStatus = BS_MissRight;
+            clearBall();
+            rightPaddlePattern = 0xFF;
+            gameStart = 0;
+            break;
+
+        case BS_MissLeft:
+            currBallStatus = BS_MissLeft;
+            clearBall();
+            leftPaddlePattern = 0xFF;
+            gameStart = 0;
+            break;
+
+        default: break;
+    }
+    return state;
+}
+
+// Simple AI to control left paddle
+enum LeftPaddleAI_States { LPAI_Wait, LPAI_MoveUp, LPAI_MoveDown };
+int LeftPaddleAI_Tick(int state) {
+    unsigned char r = rand() % 10;   // Decides whether to follow ball
+
+    switch (state) {    // Transitions
+        case LPAI_Wait: 
+            if ((r >= 5) && (currBallStatus == BS_UpLeft)) { state = LPAI_MoveUp; }
+            else if ((r >= 5) && (currBallStatus == BS_DownLeft)) { state = LPAI_MoveDown; }
+            else { state = LPAI_Wait; }
+            break;
+
+        case LPAI_MoveUp: state = LPAI_Wait; break;
+        case LPAI_MoveDown: state = LPAI_Wait; break;
+        default: state = LPAI_Wait; break;
+    }
+    switch (state) {    // Actions
+        case LPAI_Wait: break;
+        case LPAI_MoveUp: if (leftPaddlePattern != 0xE0) { leftPaddlePattern <<= 1; } break;
+        case LPAI_MoveDown: if (leftPaddlePattern != 0x07) { leftPaddlePattern >>= 1; } break;
         default: break;
     }
     return state;
@@ -478,8 +517,8 @@ int main(void) {
     DDRD = 0xFF; PORTD = 0x00;  // Pin D is output (matrix rows, OUTPUT)
 
     // Array of tasks
-    static task task1, task2, task3, task4, task5;
-    task* tasks[] = { &task1, &task2, &task3, &task4, &task5 };
+    static task task1, task2, task3, task4, task5, task6;
+    task* tasks[] = { &task1, &task2, &task3, &task4, &task5, &task6 };
     const unsigned short numTasks = (sizeof(tasks) / sizeof(task*));
 
     const char start = -1;
@@ -501,19 +540,26 @@ int main(void) {
 
     // Task 3 (BallStatus_Tick)
     tasks[j]->state = start;
-    tasks[j]->period = 500;
+    tasks[j]->period = 300;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &BallStatus_Tick;
     ++j;
 
-    // Task 4 (Output_Tick)
+    // Task 4 (LeftPaddleAI_Tick)
+    tasks[j]->state = start;
+    tasks[j]->period = 200;
+    tasks[j]->elapsedTime = tasks[j]->period;
+    tasks[j]->TickFct = &LeftPaddleAI_Tick;
+    ++j;
+
+    // Task 5 (Output_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 1;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &Output_Tick;
     ++j;
 
-    // Task 5 (StartReset_Tick)
+    // Task 6 (StartReset_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 20;
     tasks[j]->elapsedTime = tasks[j]->period;
