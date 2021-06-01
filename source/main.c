@@ -29,7 +29,7 @@
 // Matrix info
 const unsigned char numRows = 8;
 unsigned char gameStart = 0;  // 0 = game reset/paused, 1 = game start
-enum BallStatus_States { BS_Wait, BS_Right, BS_Left, BS_UpRight, BS_DownRight, BS_UpLeft, BS_DownLeft, BS_Miss };  // Possible movements for ball
+enum BallStatus_States { BS_Wait, BS_Right, BS_Left, BS_UpRight, BS_DownRight, BS_UpLeft, BS_DownLeft, BS_Miss } currBallStatus;  // Possible movements for ball
 unsigned char rows[8] = { 0x1C, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1C };  // First, last are paddles
 //              Rows:      1      2     3     4     5     6     7     8
 unsigned char ballPattern = 0x08;  // Ball is initially 0x08
@@ -72,6 +72,7 @@ void resetRows() {
     rows[6] = 0x00; rows[7] = 0x1C;
     ballPattern = 0x08;
     ballRowIndex = 3;
+    currBallStatus = BS_Wait;
 }
 
 // Removes ball from screen
@@ -88,62 +89,388 @@ void clearBall() {
 // 	    0x0E
 // Bot: 0x07
 
+// case 0x80: break;
+// case 0x40: break;
+// case 0x20: break;
+// case 0x10: break;
+// case 0x08: break;
+// case 0x04: break;
+// case 0x02: break;
+// case 0x01: break;
+// default: break;
+
 // Update the ball's status/direction
 int updateBallStatus() {
     int newBallStatus = -1;
-    switch (ballRowIndex) { // Check what side ball is on
-        case 1:  // Right side
+    switch (ballRowIndex) {   // Check what side ball is on
+        case 1:   // Right side
             switch (rightPaddlePattern) {   // Check where the right paddle is
-                case 0xE0:  // Top
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x70:
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x31:
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x1C:  // Mid
-                    switch (ballPattern) {
-                        case 0x08: newBallStatus = BS_Left; break;
+                case 0xE0:   // Top
+                    switch (ballPattern) {   // Check where the ball is
+                        case 0x80:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_DownLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x40:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
                         default: break;
                     }
                     break;
-                case 0x0E:
+
+                case 0x70:
                     switch (ballPattern) {
-                        case 0x08: newBallStatus = BS_UpLeft;
-                        default: break; 
+                        case 0x40:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x10:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        default: break;
                     }
                     break;
-                case 0x07:  // Bottom
-                    switch (ballPattern) { default: break; }
+
+                case 0x31:
+                    switch (ballPattern) {
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x10:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        default: break;
+                    }
                     break;
+
+                case 0x1C:   // Mid
+                    switch (ballPattern) {
+                        case 0x10: 
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
+                case 0x0E:
+                    switch (ballPattern) {
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_UpLeft; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
+                case 0x07:   // Bottom
+                    switch (ballPattern) {
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_DownLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        case 0x01:
+                            switch (currBallStatus) {
+                                case BS_Right: newBallStatus = BS_Left; break;
+                                case BS_UpRight: newBallStatus = BS_UpLeft; break;
+                                case BS_DownRight: newBallStatus = BS_UpLeft; break;
+                                default: newBallStatus = BS_Left; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
                 default: break;
             }
             break;
+
         case 6:  // Left side
             switch (leftPaddlePattern) {    // Check where the left paddle is
-                case 0xE0:  // Top
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x70:
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x31:
-                    switch (ballPattern) { default: break; }
-                    break;
-                case 0x1C:
+                case 0xE0:   // Top
                     switch (ballPattern) {
-                        case 0x08: newBallStatus = BS_Right; break;
+                        case 0x80:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_DownRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x40:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
                         default: break;
                     }
                     break;
+
+                case 0x70:
+                    switch (ballPattern) {
+                        case 0x40:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x10:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
+                case 0x31:
+                    switch (ballPattern) {
+                        case 0x20:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x10:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
+                case 0x1C:   // Mid
+                    switch (ballPattern) {
+                        case 0x10:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        default: break;
+                    }
+                    break;
+
                 case 0x0E:
-                    switch (ballPattern) { default: break; }
+                    switch (ballPattern) {
+                        case 0x08:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        default: break;
+                    }
                     break;
-                case 0x07:  // Bottom
-                    switch (ballPattern) { default: break; }
+
+                case 0x07:   // Bottom
+                    switch (ballPattern) {
+                        case 0x04:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x02:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_DownRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        case 0x01:
+                            switch (currBallStatus) {
+                                case BS_Left: newBallStatus = BS_Right; break;
+                                case BS_UpLeft: newBallStatus = BS_UpRight; break;
+                                case BS_DownLeft: newBallStatus = BS_UpRight; break;
+                                default: newBallStatus = BS_Right; break;
+                            }
+                            break;
+                        default: break;
+                    }
                     break;
+
                 default: break;
             }
             break;
@@ -245,7 +572,7 @@ int LeftPaddleInput_Tick(int state) {
 // Handles ball physics
 int BallStatus_Tick(int state) {
     unsigned char r = rand() % 10;  // Decides initial ball direction
-    displayChar(ballRowIndex);  // DEBUGGING
+    // displayChar(ballRowIndex);  // DEBUGGING
 
     switch (state) {    // Transitions
         case BS_Wait:
@@ -259,7 +586,7 @@ int BallStatus_Tick(int state) {
                 resetRows();
                 state = BS_Wait;
             }
-            if (ballRowIndex == 1) { state = updateBallStatus(); }
+            else if (ballRowIndex == 1) { state = updateBallStatus(); }
             else { state = BS_Right; }
             break; 
 
@@ -314,34 +641,53 @@ int BallStatus_Tick(int state) {
 
         default: state = BS_Wait; break;
     }
+    if (state == BS_DownRight) { set_PWM(261.63); }  // DEBUGGING
     switch (state) {    // Actions
-        case BS_Wait: break;
+        case BS_Wait: currBallStatus = BS_Wait; break;
 
         case BS_Right:
+            currBallStatus = BS_Right;
             rows[ballRowIndex] = 0x00;
             rows[--ballRowIndex] = ballPattern;
             break;
 
         case BS_Left:
+            currBallStatus = BS_Left;
             rows[ballRowIndex] = 0x00;
             rows[++ballRowIndex] = ballPattern;
             break;
 
         case BS_UpLeft:
+            currBallStatus = BS_UpLeft;
             rows[ballRowIndex] = 0x00;
             ballPattern <<= 1;
             rows[++ballRowIndex] = ballPattern;
             break;
 
         case BS_DownLeft:
+            currBallStatus = BS_DownLeft;
             rows[ballRowIndex] = 0x00;
             ballPattern >>= 1;
             rows[++ballRowIndex] = ballPattern;
             break;
 
+        case BS_UpRight:
+            currBallStatus = BS_UpRight;
+            rows[ballRowIndex] = 0x00;
+            ballPattern <<= 1;
+            rows[--ballRowIndex] = ballPattern;
+            break;
+
+        case BS_DownRight:
+            currBallStatus = BS_DownRight;
+            rows[ballRowIndex] = 0x00;
+            ballPattern >>= 1;
+            rows[--ballRowIndex] = ballPattern;
+            break;
+
         default: break;
     }
-    displayChar(ballRowIndex);  // DEBUGGING
+    // displayChar(ballRowIndex);  // DEBUGGING
     return state;
 }
 
