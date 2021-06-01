@@ -29,12 +29,16 @@
 // Matrix info
 const unsigned char numRows = 8;
 unsigned char gameStart = 0;  // 0 = game reset/paused, 1 = game start
+unsigned long ballSpeed = 300;    // Ball initially moves @ 300ms period
 unsigned char ballPattern = 0x08;  // Ball is initially 0x08
 unsigned char ballRowIndex = 3;    // Ball is initially index 3 in rows[]
-enum BallStatus_States { BS_Wait, BS_Right, BS_Left, BS_UpRight, 
-                        BS_DownRight, BS_UpLeft, BS_DownLeft, BS_MissRight, BS_MissLeft } currBallStatus;  // Possible movements for ball
+
+enum BallStatus_States { BS_Wait, BS_Right, BS_Left, 
+                        BS_UpRight, BS_DownRight, BS_UpLeft, 
+                        BS_DownLeft, BS_MissRight, BS_MissLeft } currBallStatus;  // Possible movements for ball
+
 unsigned char rows[8] = { 0x1C, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x1C };  // First, last are paddles
-//              Rows:      1      2     3     4     5     6     7     8
+//     Rows:    (Top)      1      2     3     4     5     6     7     8      (Bot)
 
 // Paddle variables
 const unsigned char paddleTopPos = 0xE0;
@@ -43,10 +47,11 @@ const unsigned char paddleBotPos = 0x07;
 #define leftPaddlePattern rows[7]
 
 // Resets row patterns to default
-void resetRows() {
+void softReset() {
     rows[0] = 0x1C; rows[1] = 0x00; rows[2] = 0x00;
     rows[3] = 0x08; rows[4] = 0x00; rows[5] = 0x00;
     rows[6] = 0x00; rows[7] = 0x1C;
+    ballSpeed = 300;
     ballPattern = 0x08;
     ballRowIndex = 3;
     currBallStatus = BS_Wait;
@@ -58,6 +63,12 @@ void clearBall() {
     rows[4] = 0x00; rows[5] = 0x00; rows[6] = 0x00;
 }
 
+// Speed up ball
+void speedUpBall() { if (ballSpeed >= 200) { ballSpeed -= 50; } }
+
+// Slow down ball
+void slowDownBall() { if (ballSpeed <= 350) { ballSpeed += 50; } }
+
 // Update the ball's status/direction
 int updateBallStatus() {
     int newBallStatus = -1;
@@ -66,18 +77,18 @@ int updateBallStatus() {
             switch (rightPaddlePattern) {   // Check where the right paddle is
                 case 0xE0:   // Top
                     switch (ballPattern) {   // Check where the ball is
-                        case 0x80: newBallStatus = BS_DownLeft; break;
-                        case 0x40: newBallStatus = BS_Left; break;
-                        case 0x20: newBallStatus = BS_DownLeft; break;
+                        case 0x80: newBallStatus = BS_DownLeft; speedUpBall(); break;
+                        case 0x40: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x20: newBallStatus = BS_DownLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
                 case 0x70:
                     switch (ballPattern) {
-                        case 0x40: newBallStatus = BS_UpLeft; break;
-                        case 0x20: newBallStatus = BS_Left; break;
-                        case 0x10: newBallStatus = BS_DownLeft; break;
+                        case 0x40: newBallStatus = BS_UpLeft; speedUpBall(); break;
+                        case 0x20: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x10: newBallStatus = BS_DownLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
@@ -85,36 +96,36 @@ int updateBallStatus() {
                 case 0x38:
                     set_PWM(261.63);
                     switch (ballPattern) {
-                        case 0x20: newBallStatus = BS_UpLeft; break;
-                        case 0x10: newBallStatus = BS_Left; break;
-                        case 0x08: newBallStatus = BS_DownLeft; break;
+                        case 0x20: newBallStatus = BS_UpLeft; speedUpBall(); break;
+                        case 0x10: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x08: newBallStatus = BS_DownLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
                 case 0x1C:   // Mid
                     switch (ballPattern) {
-                        case 0x10: newBallStatus = BS_UpLeft; break;
-                        case 0x08: newBallStatus = BS_Left; break;
-                        case 0x04: newBallStatus = BS_DownLeft; break;
+                        case 0x10: newBallStatus = BS_UpLeft; speedUpBall(); break;
+                        case 0x08: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x04: newBallStatus = BS_DownLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
                 case 0x0E:
                     switch (ballPattern) {
-                        case 0x08: newBallStatus = BS_UpLeft; break;
-                        case 0x04: newBallStatus = BS_Left; break;
-                        case 0x02: newBallStatus = BS_DownLeft; break;
+                        case 0x08: newBallStatus = BS_UpLeft; speedUpBall(); break;
+                        case 0x04: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x02: newBallStatus = BS_DownLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
 
                 case 0x07:   // Bottom
                     switch (ballPattern) {
-                        case 0x04: newBallStatus = BS_UpLeft; break;
-                        case 0x02: newBallStatus = BS_Left; break;
-                        case 0x01: newBallStatus = BS_UpLeft; break;
+                        case 0x04: newBallStatus = BS_UpLeft; speedUpBall(); break;
+                        case 0x02: newBallStatus = BS_Left; slowDownBall(); break;
+                        case 0x01: newBallStatus = BS_UpLeft; speedUpBall(); break;
                         default: newBallStatus = BS_MissRight; break;
                     }
                     break;
@@ -127,54 +138,54 @@ int updateBallStatus() {
             switch (leftPaddlePattern) {    // Check where the left paddle is
                 case 0xE0:   // Top
                     switch (ballPattern) {
-                        case 0x80: newBallStatus = BS_DownRight; break;
-                        case 0x40: newBallStatus = BS_Right; break;
-                        case 0x20: newBallStatus = BS_DownRight; break;
+                        case 0x80: newBallStatus = BS_DownRight; speedUpBall(); break;
+                        case 0x40: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x20: newBallStatus = BS_DownRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
                 case 0x70:
                     switch (ballPattern) {
-                        case 0x40: newBallStatus = BS_UpRight; break;
-                        case 0x20: newBallStatus = BS_Right; break;
-                        case 0x10: newBallStatus = BS_DownRight; break;
+                        case 0x40: newBallStatus = BS_UpRight; speedUpBall(); break;
+                        case 0x20: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x10: newBallStatus = BS_DownRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
                 case 0x38:
                     switch (ballPattern) {
-                        case 0x20: newBallStatus = BS_UpRight; break;
-                        case 0x10: newBallStatus = BS_Right; break;
-                        case 0x08: newBallStatus = BS_DownRight; break;
+                        case 0x20: newBallStatus = BS_UpRight; speedUpBall(); break;
+                        case 0x10: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x08: newBallStatus = BS_DownRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
                 case 0x1C:   // Mid
                     switch (ballPattern) {
-                        case 0x10: newBallStatus = BS_UpRight; break;
-                        case 0x08: newBallStatus = BS_Right; break;
-                        case 0x04: newBallStatus = BS_DownRight; break;
+                        case 0x10: newBallStatus = BS_UpRight; speedUpBall(); break;
+                        case 0x08: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x04: newBallStatus = BS_DownRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
                 case 0x0E:
                     switch (ballPattern) {
-                        case 0x08: newBallStatus = BS_UpRight; break;
-                        case 0x04: newBallStatus = BS_Right; break;
-                        case 0x02: newBallStatus = BS_DownRight; break;
+                        case 0x08: newBallStatus = BS_UpRight; speedUpBall(); break;
+                        case 0x04: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x02: newBallStatus = BS_DownRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
 
                 case 0x07:   // Bottom
                     switch (ballPattern) {
-                        case 0x04: newBallStatus = BS_UpRight; break;
-                        case 0x02: newBallStatus = BS_Right; break;
-                        case 0x01: newBallStatus = BS_UpRight; break;
+                        case 0x04: newBallStatus = BS_UpRight; speedUpBall(); break;
+                        case 0x02: newBallStatus = BS_Right; slowDownBall(); break;
+                        case 0x01: newBallStatus = BS_UpRight; speedUpBall(); break;
                         default: newBallStatus = BS_MissLeft; break;
                     }
                     break;
@@ -196,7 +207,7 @@ int StartReset_Tick(int state) {
             if (tmpPA2) { 
                 state = SR_Update; 
                 gameStart = ~gameStart;
-                if (!gameStart) { resetRows(); }
+                if (!gameStart) { softReset(); }
             }
             else { state = SR_Wait; }
             break;
@@ -291,7 +302,7 @@ int BallStatus_Tick(int state) {
 
         case BS_Right:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if (ballRowIndex == 1) { state = updateBallStatus(); }
@@ -300,7 +311,7 @@ int BallStatus_Tick(int state) {
 
         case BS_Left:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if (ballRowIndex == 6) { state = updateBallStatus(); }
@@ -309,7 +320,7 @@ int BallStatus_Tick(int state) {
 
         case BS_UpLeft:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if ((ballPattern == 0x80) && (ballRowIndex != 6)) { state = BS_DownLeft; }
@@ -319,7 +330,7 @@ int BallStatus_Tick(int state) {
 
         case BS_DownLeft:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if ((ballPattern == 0x01) && (ballRowIndex != 6)) { state = BS_UpLeft; }
@@ -329,7 +340,7 @@ int BallStatus_Tick(int state) {
 
         case BS_UpRight:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if ((ballPattern == 0x80) && (ballRowIndex != 1)) { state = BS_DownRight; }
@@ -339,7 +350,7 @@ int BallStatus_Tick(int state) {
 
         case BS_DownRight:
             if (!gameStart) {
-                resetRows();
+                softReset();
                 state = BS_Wait;
             }
             else if ((ballPattern == 0x01) && (ballRowIndex != 1)) { state = BS_UpRight; }
@@ -350,7 +361,7 @@ int BallStatus_Tick(int state) {
         case BS_MissRight:
             if (!gameStart) { state = BS_MissRight; }
             else {
-                resetRows();
+                softReset();
                 gameStart = 0;
                 state = BS_Wait;
             }
@@ -359,7 +370,7 @@ int BallStatus_Tick(int state) {
         case BS_MissLeft:
             if (!gameStart) { state = BS_MissLeft; }
             else {
-                resetRows();
+                softReset();
                 gameStart = 0;
                 state = BS_Wait;
             }
@@ -436,8 +447,8 @@ int LeftPaddleAI_Tick(int state) {
 
     switch (state) {    // Transitions
         case LPAI_Wait: 
-            if ((r >= 5) && (currBallStatus == BS_UpLeft)) { state = LPAI_MoveUp; }
-            else if ((r >= 5) && (currBallStatus == BS_DownLeft)) { state = LPAI_MoveDown; }
+            if ((r >= 4) && (currBallStatus == BS_UpLeft)) { state = LPAI_MoveUp; }
+            else if ((r >= 4) && (currBallStatus == BS_DownLeft)) { state = LPAI_MoveDown; }
             else { state = LPAI_Wait; }
             break;
 
@@ -516,7 +527,7 @@ int main(void) {
 
     // Task 3 (BallStatus_Tick)
     tasks[j]->state = start;
-    tasks[j]->period = 300;
+    tasks[j]->period = ballSpeed;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &BallStatus_Tick;
     ++j;
@@ -555,6 +566,7 @@ int main(void) {
 
     while (1) {
         for (i = 0; i < numTasks; ++i) {
+            if (tasks[i]->TickFct == &BallStatus_Tick) { tasks[i]->period = ballSpeed; }   // Update ball speed
             if (tasks[i]->elapsedTime >= tasks[i]->period) {
                 tasks[i]->state = tasks[i]->TickFct(tasks[i]->state);
                 tasks[i]->elapsedTime = 0;
