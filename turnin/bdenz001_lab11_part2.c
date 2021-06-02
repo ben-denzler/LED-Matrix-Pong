@@ -35,8 +35,6 @@ unsigned char ballRowIndex = 3;     // Ball is initially index 3 in rows[]
 unsigned char player2Enable = 0;    // Is player 2 enabled?
 unsigned char player1Points = 0;    // Player 1's points
 unsigned char player2Points = 0;    // Player 2's points
-unsigned char displayOne = 0;       // Displaying #1?
-unsigned char displayTwo = 0;       // Displaying #2?
 
 enum BallStatus_States { BS_Wait, BS_Right, BS_Left, 
                         BS_UpRight, BS_DownRight, BS_UpLeft, 
