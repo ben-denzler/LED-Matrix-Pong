@@ -26,12 +26,15 @@
 // PA1 = Right paddle down
 // PA2 = Start/reset
 
-// Matrix info
+// Game info
 const unsigned char numRows = 8;
-unsigned char gameStart = 0;  // 0 = game reset/paused, 1 = game start
-unsigned long ballSpeed = 300;    // Ball initially moves @ 300ms period
-unsigned char ballPattern = 0x08;  // Ball is initially 0x08
-unsigned char ballRowIndex = 3;    // Ball is initially index 3 in rows[]
+unsigned char gameStart = 0;        // 0 = game reset/paused, 1 = game start
+unsigned long ballSpeed = 300;      // Ball initially moves @ 300ms period
+unsigned char ballPattern = 0x08;   // Ball is initially 0x08
+unsigned char ballRowIndex = 3;     // Ball is initially index 3 in rows[]
+unsigned char player2Enable = 0;    // Is player 2 enabled?
+unsigned char player1Points = 0;    // Player 1's points
+unsigned char player2Points = 0;    // Player 2's points
 
 enum BallStatus_States { BS_Wait, BS_Right, BS_Left, 
                         BS_UpRight, BS_DownRight, BS_UpLeft, 
@@ -68,6 +71,30 @@ void speedUpBall() { if (ballSpeed >= 200) { ballSpeed -= 50; } }
 
 // Slow down ball
 void slowDownBall() { if (ballSpeed <= 350) { ballSpeed += 50; } }
+
+// Update LEDs for player points
+void setPointsLEDs() {
+    switch (player1Points) {
+        case 1: PORTB = SetBit(PORTB, 2, 1); break;
+        case 2: PORTB = SetBit(PORTB, 3, 1); break;
+        case 3: PORTB = SetBit(PORTB, 4, 1); break;
+        default:
+            PORTB = SetBit(PORTB, 2, 0);
+            PORTB = SetBit(PORTB, 3, 0);
+            PORTB = SetBit(PORTB, 4, 0);
+            break;
+    }
+    switch (player2Points) {
+        case 1: PORTA = SetBit(PORTA, 4, 1); break;
+        case 2: PORTA = SetBit(PORTA, 5, 1); break;
+        case 3: PORTA = SetBit(PORTA, 6, 1); break;
+        default:
+            PORTA = SetBit(PORTA, 4, 0);
+            PORTA = SetBit(PORTA, 5, 0);
+            PORTA = SetBit(PORTA, 6, 0);
+            break;
+    }
+}
 
 // Update the ball's status/direction
 int updateBallStatus() {
@@ -198,6 +225,7 @@ int updateBallStatus() {
     return newBallStatus;
 }
 
+// Update gameStart and reset if needed
 enum StartReset_States { SR_Wait, SR_Update };
 int StartReset_Tick(int state) {
     unsigned char tmpPA2 = (~PINA) & 0x04;  // PA2 = Start/reset
@@ -251,6 +279,79 @@ int RightPaddleInput_Tick(int state) {
             break;
 
         default: state = RPI_Wait; break;
+    }
+    return state;
+}
+
+// Update player2Enable when button is pressed
+enum LeftPaddleScanInput_States { LPSI_Wait, LPSI_Update };
+int LeftPaddleScanInput_Tick(int state) {
+    unsigned char tmpPA3 = (~PINA) & 0x08;  // PA3 = player 2 join
+
+    switch (state) {    // Transitions
+        case LPSI_Wait: 
+            if (tmpPA3) { 
+                player2Enable = ~player2Enable;
+                state = LPSI_Update; 
+            }
+            else { state = LPSI_Wait; }
+            break;
+
+        case LPSI_Update:
+            if (tmpPA3) { state = LPSI_Update; }
+            else { state = LPSI_Wait; }
+            break;
+
+        default: state = LPSI_Wait; break;
+    }
+    return state;
+}
+
+// Update LEDs for # of players
+enum UpdateNumPlayers_States { UNP_Update };
+int UpdateNumPlayers_Tick(int state) {
+    switch (state) {    // Transitions
+        case UNP_Update:
+            if (player2Enable) { 
+                PORTB = SetBit(PORTB, 0, 1); 
+                PORTB = SetBit(PORTB, 1, 1); 
+            }
+            else {
+                PORTB = SetBit(PORTB, 0, 1); 
+                PORTB = SetBit(PORTB, 1, 0); 
+            }
+            break;
+        default: state = UNP_Update; break;
+    }
+    return state;
+}
+
+enum UpdatePlayerScores_States { UPS_Wait, UPS_Update };
+int UpdatePlayerScores_Tick(int state) {
+    switch (state) {    // Transitions
+        case UPS_Wait:
+            if ((currBallStatus == BS_MissRight) && (player2Points < 3)) {
+                ++player2Points;
+                state = UPS_Update;
+            }
+            else if ((currBallStatus == BS_MissLeft) && (player1Points < 3)) {
+                ++player1Points;
+                state = UPS_Update;
+            }
+            else { state = UPS_Wait; }
+            break;
+
+        case UPS_Update:
+            if ((currBallStatus == BS_MissRight) || (currBallStatus == BS_MissLeft)) { state = UPS_Update; }
+            else { state = UPS_Wait; }
+            break;
+
+        default: state = UPS_Wait; break;
+    }
+    switch (state) {    // Actions
+        case UPS_Wait: break;
+        case UPS_Update: setPointsLEDs(); break;
+        default: break;
     }
     return state;
 }
@@ -361,6 +462,10 @@ int BallStatus_Tick(int state) {
         case BS_MissRight:
             if (!gameStart) { state = BS_MissRight; }
             else {
+                if (player2Points >= 3) { 
+                    player1Points = player2Points = 0; 
+                    setPointsLEDs();
+                }
                 softReset();
                 gameStart = 0;
                 state = BS_Wait;
@@ -370,6 +475,10 @@ int BallStatus_Tick(int state) {
         case BS_MissLeft:
             if (!gameStart) { state = BS_MissLeft; }
             else {
+                if (player1Points >= 3) { 
+                    player1Points = player2Points = 0;
+                    setPointsLEDs();
+                }
                 softReset();
                 gameStart = 0;
                 state = BS_Wait;
@@ -379,7 +488,7 @@ int BallStatus_Tick(int state) {
         default: state = BS_Wait; break;
     }
     switch (state) {    // Actions
-        case BS_Wait: break;
+        case BS_Wait: currBallStatus = BS_Wait; break;
 
         case BS_Right:
             currBallStatus = BS_Right;
@@ -497,15 +606,14 @@ int Output_Tick(int state) {
 }
 
 int main(void) {
-    DDRA = 0x00; PORTA = 0xFF;  // Pin A is input (buttons)
-    // DDRB = 0x40; PORTB = 0xBF;  // PB6 is output (PWM), rest is input
-    DDRB = 0xFF; PORTB = 0x00;  // PORTB is output (PWM, debugging)
+    DDRA = 0x70; PORTA = 0x8F;  // Pin A is input/output
+    DDRB = 0xFF; PORTB = 0x00;  // PORTB is output (PWM etc.)
     DDRC = 0xFF; PORTC = 0x00;  // Pin C is output (matrix cols, GROUND)
     DDRD = 0xFF; PORTD = 0x00;  // Pin D is output (matrix rows, OUTPUT)
 
     // Array of tasks
-    static task task1, task2, task3, task4, task5, task6;
-    task* tasks[] = { &task1, &task2, &task3, &task4, &task5, &task6 };
+    static task task1, task2, task3, task4, task5, task6, task7, task8;
+    task* tasks[] = { &task1, &task2, &task3, &task4, &task5, &task6, &task7, &task8 };
     const unsigned short numTasks = (sizeof(tasks) / sizeof(task*));
 
     const char start = -1;
@@ -518,39 +626,53 @@ int main(void) {
     tasks[j]->TickFct = &RightPaddleInput_Tick;
     ++j;
 
-    // Task 2 (LeftPaddleInput_Tick)
+    // Task 2 (LeftPaddleScanInput_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 10;
     tasks[j]->elapsedTime = tasks[j]->period;
-    tasks[j]->TickFct = &LeftPaddleInput_Tick;
+    tasks[j]->TickFct = &LeftPaddleScanInput_Tick;
     ++j;
 
-    // Task 3 (BallStatus_Tick)
+    // Task 3 (UpdateNumPlayers_Tick)
+    tasks[j]->state = start;
+    tasks[j]->period = 10;
+    tasks[j]->elapsedTime = tasks[j]->period;
+    tasks[j]->TickFct = &UpdateNumPlayers_Tick;
+    ++j;
+
+    // Task 4 (BallStatus_Tick)
     tasks[j]->state = start;
     tasks[j]->period = ballSpeed;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &BallStatus_Tick;
     ++j;
 
-    // Task 4 (LeftPaddleAI_Tick)
+    // Task 5 (LeftPaddleAI_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 200;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &LeftPaddleAI_Tick;
     ++j;
 
-    // Task 5 (Output_Tick)
+    // Task 6 (Output_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 1;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &Output_Tick;
     ++j;
 
-    // Task 6 (StartReset_Tick)
+    // Task 7 (StartReset_Tick)
     tasks[j]->state = start;
     tasks[j]->period = 20;
     tasks[j]->elapsedTime = tasks[j]->period;
     tasks[j]->TickFct = &StartReset_Tick;
+    ++j;
+
+    // Task 8 (UpdatePlayerScores_Tick)
+    tasks[j]->state = start;
+    tasks[j]->period = 10;
+    tasks[j]->elapsedTime = tasks[j]->period;
+    tasks[j]->TickFct = &UpdatePlayerScores_Tick;
     ++j;
 
     // Find GCD for period
