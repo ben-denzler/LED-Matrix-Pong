@@ -1,7 +1,7 @@
 /* Author: Benjamin Denzler
  * Lab Section: 21
  * Assignment: Lab #11
- * Exercise Description: Pong (Basic)
+ * Exercise Description: Pong (Advancement 2)
  *
  * I acknowledge all content contained herein, excluding template or example
  * code is my own original work.
@@ -85,18 +85,6 @@ void softReset() {
 void clearBall() {
     rows[1] = 0x00; rows[2] = 0x00; rows[3] = 0x00; 
     rows[4] = 0x00; rows[5] = 0x00; rows[6] = 0x00;
-}
-
-// Outputs the number 1
-void outputOne() {
-    rows[0] = 0x00; rows[1] = 0x01; rows[2] = 0x01; rows[3] = 0x7F;
-    rows[4] = 0x7F; rows[5] = 0x11; rows[6] = 0x01; rows[7] = 0x00;
-}
-
-// Outputs the number 2
-void outputTwo() {
-    rows[0] = 0x00; rows[1] = 0x31; rows[2] = 0x79; rows[3] = 0x49;
-    rows[4] = 0x45; rows[5] = 0x67; rows[6] = 0x23; rows[7] = 0x00;
 }
 
 // Speed up ball

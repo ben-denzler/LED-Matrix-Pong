@@ -1,7 +1,7 @@
 /* Author: Benjamin Denzler
  * Lab Section: 21
  * Assignment: Lab #11
- * Exercise Description: Pong (Basic)
+ * Exercise Description: Pong (Advancement 1)
  *
  * I acknowledge all content contained herein, excluding template or example
  * code is my own original work.
