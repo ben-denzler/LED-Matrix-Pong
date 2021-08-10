@@ -23,3 +23,8 @@
  * 8x8 LED Matrix
  * [50K Potentiometer](https://www.digikey.com/en/products/detail/tt-electronics-bi/P160KN2-0EC15B50K/5957458)
  * Miscellaneous wires, LEDs and resistors
+
+## Demo Video
+See a demo of my game by clicking on the video below!
+
+[![LED Matrix Pong Demo](docs/Video-screenshot.png)](https://youtu.be/rEYT3FIv4lE "LED Matrix Pong - Demo")
