@@ -27,4 +27,4 @@
 ## Demo Video
 See a demo of my game by clicking on the video below!
 
-[![LED Matrix Pong Demo](docs/Video-screenshot.png)](https://youtu.be/rEYT3FIv4lE "LED Matrix Pong - Demo")
+[![LED Matrix Pong Demo](docs/Video-screenshot.png)](https://youtu.be/DW7piZYLxFU "LED Matrix Pong - Demo")
